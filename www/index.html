@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>JQuery Example</title>
+    <link type="text/css" href="main.css" rel="stylesheet" />
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $("a#the_link").click(function() {
+                $("div#foo").load("hangman.html");
+            });
+
+        });
+    </script>
+</head>
+<body>
+<span></span>
+
+<p>To start a game: enter a word</p>
+
+<form>
+    <input id="password" type="password">
+</form>
+<p>Type a guess and then click or tab out of the input.</p>
+
+<input type="text" value="">
+
+<script>
+    $( "input:text" ).on( "blur", function() {
+        $( this ).val(function( i, val ) {
+            $("div#foo").load("guess_" + val);
+        });
+    });
+    $( "form" ).submit(function( event ) {
+        if ($( "input:password" ).val().split(" ").length === 1) {
+            event.preventDefault();
+            $("div#foo").load("init_" + $( "input:password" ).val());
+            return;
+        }
+        $( "span" ).text( "Not valid!" ).show().fadeOut( 1000 );
+        event.preventDefault();
+    });
+</script>
+
+
+
+<a href="#" id="the_link">click here to reset</a>
+
+<div id="foo">additional content from the server will go here.</div>
+
+</body>
+</html>
