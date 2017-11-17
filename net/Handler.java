@@ -12,7 +12,6 @@ public class Handler implements Runnable {
     private OutputStream outStream;
     private Clients clients;
     private StringBuilder hidden;
-    private int guesses = 0;
 
     private static final boolean AUTOFLUSH = true;
     private static final String SERVER_ID_HEADER = "Server: Httpd 1.0";
@@ -35,28 +34,28 @@ public class Handler implements Runnable {
             br = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             outStream = clientSocket.getOutputStream();
             pw = new PrintWriter(outStream, false);
-            if(br.ready()){
-                String line = br.readLine();
-                String[] temp = line.split(" ");
-                for(String ins : temp){
-                    System.out.println(ins);
-                    args.push(ins);
-                }
-
-                while ((line = br.readLine()) != null && !line.trim().equals("")) {
-                    sb.append(line);
-                }
+            String line = br.readLine();
+            String[] tempo = line.split(" ");
+            for(String ins : tempo){
+                System.out.println(ins);
+                args.push(ins);
             }
-            if(args.poll().startsWith("HTTP/")){
+
+            while ((line = br.readLine()) != null && !line.trim().equals("")) {
+                sb.append(line);
+            }
+            if(args.size() < 2){
+                System.out.println("ERR: FREDRIK");
+            }else if(args.poll().startsWith("HTTP/")){
               String s = args.poll();
               if(s.equals("/")){
                 if(args.poll().equals(HTTP_GET_METHOD)){
-                  byte[] fileContent = readFile("index.html");
+                  byte[] fileContent = readFile("/index.html");
                   pw.println(HTTP_OK_RESPONSE);
                   pw.println("Date:" + java.time.LocalDate.now());
                   pw.println(SERVER_ID_HEADER);
                   pw.println("Content-length: " + fileContent.length);
-                  pw.println("Content-type: " + getMimeFromExtension("index.html"));
+                  pw.println("Content-type: " + getMimeFromExtension("/index.html"));
                   pw.println();
                   pw.flush();
                   outStream.write(fileContent);
@@ -72,9 +71,9 @@ public class Handler implements Runnable {
                       pw.println("Content-type: " + getMimeFromExtension("hangman.html"));
                       pw.println();
 
-                      pw.print(hangmanHead + "Guesses = " + guesses + hangmanTail);
+                      pw.print(hangmanHead + "Guesses = " + hangmanTail);
                       pw.flush();
-                      guesses = 0;
+                      clients.decScore(clientSocket.getInetAddress());
                       clients.removeClient(clientSocket.getInetAddress());
                   }else{
                       notImplemented();
@@ -97,17 +96,19 @@ public class Handler implements Runnable {
               } else if (isCommand(s)) {
                   String req = args.poll();
                   if (s.startsWith("/init")) {
-                      s = s.split("_")[1];
-                      StringBuilder hidden = new StringBuilder((s.length()) * 2);
-                      char[] temp = s.toCharArray();
+                      char[] temp;
+                      if((s.length() > 6)){
+                          s = s.split("_")[1];
+                          temp = s.toCharArray();
+                      }else{
+                          temp = findRandomWord();
+                      }
+                      hidden = new StringBuilder(temp.length*3);
                       if (!clients.hasClient(clientSocket.getInetAddress())) {
-                          for (int i = 0; i < hidden.capacity(); i++) {
-                              if (i < (hidden.capacity()) / 2) {
-                                  hidden.append("_");
-                              } else {
-                                  hidden.append(temp[(i - (hidden.capacity()) / 2)]);
-                              }
+                          for (int i = 0; i < temp.length; i++) {
+                              hidden.append("_");
                           }
+                          hidden.append(temp);
                           clients.addClient(clientSocket.getInetAddress(), hidden);
                       } else {
                           hidden = clients.getHidden(clientSocket.getInetAddress());
@@ -118,20 +119,34 @@ public class Handler implements Runnable {
                           pw.println(SERVER_ID_HEADER);
                           pw.println("Content-type: " + getMimeFromExtension("hangman.html"));
                           pw.println();
-                          pw.print(hangmanHead + hidden.substring(0, hidden.capacity()/2) + hangmanTail);
+                          pw.print(hangmanHead + hidden.substring(0, hidden.capacity()/3) + hangmanTail + "&#013 ");
+                          pw.print(Integer.toString(clients.getScore(clientSocket.getInetAddress())));
                           pw.flush();
                       }else{
                           notImplemented();
                       }
                   }else if (s.startsWith("/guess") && (clients.hasClient(clientSocket.getInetAddress()))) {
-                      guesses++;
-                      s = s.split("_")[1];
-                      char c = s.toCharArray()[0];
                       hidden = clients.getHidden(clientSocket.getInetAddress());
-                      for(int i = hidden.capacity()-1; i >= hidden.capacity()/2; i--){
-                          if(hidden.charAt(i) == c){
-                              hidden.setCharAt(i-((hidden.capacity()+1)/2), c);
+                      s = s.split("_")[1];
+                      if(s.length()==1) {
+                          char c = s.toCharArray()[0];
+                          for(int i = (hidden.capacity()*2)/3-1; i >= hidden.capacity()/3; i--){
+                              if(hidden.charAt(i) == c){
+                                  hidden.setCharAt(i-hidden.capacity()/3, c);
+                              }
                           }
+                      }else{
+                          if(hidden.substring(hidden.capacity()/3, hidden.capacity()*2/3).equals(s)){
+                              hidden.replace(0, hidden.capacity()/3, s);
+
+                          }else{
+
+                          }
+                      }
+                      if(hidden.indexOf("_")==-1){
+                          clients.incScore(clientSocket.getInetAddress());
+                          hidden.setCharAt(hidden.capacity()/3+1, '_');
+                          clients.removeClient(clientSocket.getInetAddress());
                       }
                       if (req.equals(HTTP_GET_METHOD)) {
                           pw.println(HTTP_OK_RESPONSE);
@@ -139,7 +154,7 @@ public class Handler implements Runnable {
                           pw.println(SERVER_ID_HEADER);
                           pw.println("Content-type: " + getMimeFromExtension("hangman.html"));
                           pw.println();
-                          pw.print(hangmanHead + hidden.substring(0, hidden.capacity()/2) + hangmanTail);
+                          pw.print(hangmanHead + hidden.substring(0, hidden.capacity()/3) + " Score " + clients.getScore(clientSocket.getInetAddress()) + hangmanTail);
                           pw.flush();
                       }else{
                         notImplemented();
@@ -161,7 +176,6 @@ public class Handler implements Runnable {
           }
         }
     }
-
     private void notImplemented(){
         pw.println(NOT_FOUND_RESPONSE);
         pw.println("Date:" + (new Date()));
@@ -172,12 +186,16 @@ public class Handler implements Runnable {
         pw.flush();
     }
     private byte[] readFile(String filePathRelativeToRootDir) throws IOException {
-        File file = new File("www", filePathRelativeToRootDir);
+        File file = new File(new File("../www"), filePathRelativeToRootDir);
         try (FileInputStream fromFile = new FileInputStream(file)) {
             byte[] buf = new byte[(int) file.length()];
             fromFile.read(buf);
             return buf;
+        }catch (Exception e){
+            System.out.println(e);
+
         }
+        return null;
     }
     private boolean isCommand(String s) {
         return (s.length()>0);
@@ -202,5 +220,24 @@ public class Handler implements Runnable {
         }else {
             return "text/plain";
         }
+    }
+    private char[] findRandomWord() throws FileNotFoundException{
+        ArrayList<String> listWords = readFromFile();
+        int NO_WORDS = listWords.size();
+        Random rand = new Random();
+        int randIndex = rand.nextInt(NO_WORDS) + 1;
+        String s = listWords.get(randIndex);
+        char[] word = s.toCharArray();
+        return word;
+    }
+    private ArrayList<String> readFromFile() throws FileNotFoundException{
+        ArrayList<String> words;
+        Scanner sc = new Scanner(new File("words.txt"));
+        words = new ArrayList<String>();
+        while(sc.hasNextLine()){
+            String word = sc.nextLine();
+            words.add(word);
+        }
+        return words;
     }
 }
