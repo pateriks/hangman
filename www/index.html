@@ -23,7 +23,7 @@
 <form id="init">
     <input id="password" type="password">
 </form>
-
+<i></i>
 <p>Type a guess</p>
 
 <form id="guess">
@@ -40,7 +40,7 @@
             $( "input:password" ).val("");
             return;
         }
-        $( "div" ).text( "Not valid!" ).show().fadeOut( 1000 );
+        $( "i" ).text( "Not valid!" ).show().fadeOut( 1000 );
 
     });
 
@@ -51,7 +51,6 @@
             $("input:text").val("");
             return;
         }
-        $( "div" ).text( "Not valid!" ).show().fadeOut( 1000 );
     });
 </script>
 

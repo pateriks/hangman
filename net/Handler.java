@@ -119,26 +119,30 @@ public class Handler implements Runnable {
                           pw.println(SERVER_ID_HEADER);
                           pw.println("Content-type: " + getMimeFromExtension("hangman.html"));
                           pw.println();
-                          pw.print(hangmanHead + hidden.substring(0, hidden.capacity()/3) + hangmanTail + "&#013 ");
-                          pw.print(Integer.toString(clients.getScore(clientSocket.getInetAddress())));
+                          pw.print(hangmanHead + hidden.substring(0, hidden.capacity()/3) + hangmanTail);
+                          pw.print(" Score " + Integer.toString(clients.getScore(clientSocket.getInetAddress())));
                           pw.flush();
                       }else{
                           notImplemented();
                       }
                   }else if (s.startsWith("/guess") && (clients.hasClient(clientSocket.getInetAddress()))) {
+                      boolean wrong = true;
                       hidden = clients.getHidden(clientSocket.getInetAddress());
-                      s = s.split("_")[1];
+                      s = s.split("_")[1].replace(" ", "");
+                      char c = s.toCharArray()[0];
+
                       if(s.length()==1) {
-                          char c = s.toCharArray()[0];
                           for(int i = (hidden.capacity()*2)/3-1; i >= hidden.capacity()/3; i--){
                               if(hidden.charAt(i) == c){
                                   hidden.setCharAt(i-hidden.capacity()/3, c);
+                                  wrong = false;
                               }
                           }
                       }else{
                           if(hidden.substring(hidden.capacity()/3, hidden.capacity()*2/3).equals(s)){
                               hidden.replace(0, hidden.capacity()/3, s);
-
+                              wrong=false;
+                              c='G';
                           }else{
 
                           }
@@ -147,6 +151,20 @@ public class Handler implements Runnable {
                           clients.incScore(clientSocket.getInetAddress());
                           hidden.setCharAt(hidden.capacity()/3+1, '_');
                           clients.removeClient(clientSocket.getInetAddress());
+                      }else{
+                          if (wrong){
+                              if (hidden.capacity() > hidden.length()) {
+                                  hidden.append(c);
+                              } else {
+                                  System.out.println("end of tries");
+                                  for(int i=0; i<hidden.capacity()/3; i++){
+                                      hidden.setCharAt(i, hidden.charAt(i+hidden.capacity()/3));
+
+                                  }
+                                  clients.decScore(clientSocket.getInetAddress());
+                                  clients.removeClient(clientSocket.getInetAddress());
+                              }
+                          }
                       }
                       if (req.equals(HTTP_GET_METHOD)) {
                           pw.println(HTTP_OK_RESPONSE);
