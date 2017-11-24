@@ -3,8 +3,9 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Hangman.iml" filepath="$PROJECT_DIR$/Hangman.iml" />
-      <module fileurl="file://$PROJECT_DIR$/Lexicon/Lexicon.iml" filepath="$PROJECT_DIR$/Lexicon/Lexicon.iml" />
+      <module fileurl="file://$PROJECT_DIR$/application/application.iml" filepath="$PROJECT_DIR$/application/application.iml" />
       <module fileurl="file://$PROJECT_DIR$/net/net.iml" filepath="$PROJECT_DIR$/net/net.iml" />
+      <module fileurl="file://$PROJECT_DIR$/net/src.iml" filepath="$PROJECT_DIR$/net/src.iml" />
     </modules>
   </component>
 </project>
