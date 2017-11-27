@@ -81,15 +81,17 @@ public class Server {
 
                             ForkJoinTask<Integer> task = lookup.get(key.channel().hashCode());
                             if(getMsg.equals("bye")){
-                                //task.cancel(true);
-                                //key.channel().close();
                                 run = false;
+                                task.cancel(true);
+                                key.channel().close();
+
                                 break;
                             }
-                            if (task.get() == 1) {
+                            else if (task.get() == 1) {
                                 send(key, getMsg, clients);
+                            }else{
+                                send(key, "resend", clients);
                             }
-
                         }
                     }
                 }catch(Exception e) {

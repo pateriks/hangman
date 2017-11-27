@@ -26,15 +26,17 @@ public class Handler implements Runnable {
     }
     public void run(){
         System.out.println("computing");
+        String ret;
         if(guess == null){
-            String ret = getResponse("/init_");
-        }else{
-            String ret = getResponse("/guess_".concat(guess));
+            ret = getResponse("/init_");
+        }else if(guess.equals("resend")){
+            ret = "resend";
+
+        }else {
+            ret = getResponse("/guess_".concat(guess));
         }
-        String ret = getResponse("/init_");
         ByteBuffer buffer = ByteBuffer.wrap(ret.getBytes());
         try {
-
             sC.write(buffer);
         } catch (IOException e) {
             e.printStackTrace();
