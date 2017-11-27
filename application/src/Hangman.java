@@ -3,6 +3,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.LinkedList;
+import java.util.Random;
 import java.util.concurrent.ForkJoinPool;
 
 public class Hangman extends JFrame {
@@ -29,6 +30,33 @@ public class Hangman extends JFrame {
         setSize(300, 150);
         setVisible(true);
         userText.setEditable(true);
+        new Thread(()->{
+            int i = 0;
+            int print = 97;
+            Random r = new Random();
+            while(i<100){
+                print = 97 + r.nextInt(25);
+                try {
+                    Thread.sleep(5);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                que.push(Character.toString(Character.toChars(print)[0]));
+
+                i++;
+            }
+            while(true){
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(que.toString());
+
+            }
+
+        }
+        ).start();
     }
     public void displayMessage(String s){
         textArea.append(s + "\n");
