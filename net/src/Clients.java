@@ -1,6 +1,8 @@
 import java.net.InetAddress;
 import java.nio.channels.SelectionKey;
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.Set;
 
 
 public class Clients {
@@ -22,6 +24,10 @@ public class Clients {
     public void clearClients(){
         clients.clear();
         score.clear();
+    }
+    public Collection getClients(){
+        return clients.values();
+
     }
     public boolean hasClient(int key){
         return clients.containsKey(key);

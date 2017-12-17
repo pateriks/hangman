@@ -10,13 +10,12 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class Server {
-
     private Thread thread;
     private ServerSocketChannel ssC;
     private Selector selector;
     private boolean run;
     public LinkedList <String> que = new LinkedList<>();
-    private HashMap<Integer, ForkJoinTask<Integer>> lookup = new HashMap();
+    private Map <Integer, ForkJoinTask<Integer>> lookup = Collections.synchronizedMap(new HashMap<Integer, ForkJoinTask<Integer>>());
 
     private void initSelector() throws IOException {
         selector = Selector.open();
@@ -28,8 +27,11 @@ public class Server {
         ssC.register(selector, SelectionKey.OP_ACCEPT);
     }
     public void send(SelectionKey key, String s, Clients clients) throws IOException {
-        ForkJoinTask<Integer> task = ForkJoinPool.commonPool().submit(new Handler((SocketChannel)key.channel(), clients, s), 1);
-        lookup.put(key.channel().hashCode(), task);
+
+        ForkJoinTask<Integer> task = ForkJoinPool.commonPool().submit(new Handler((SocketChannel)key.channel(), clients, s, lookup), 1);
+        if(!s.equals("resend")) {
+            lookup.put(key.channel().hashCode(), task);
+        }
     }
     private String receive(SelectionKey key) throws IOException {
         SocketChannel sC = (SocketChannel) key.channel();
@@ -78,16 +80,15 @@ public class Server {
                             start(key, clients);
                         } else if (key.isReadable()) {
                             String getMsg = receive(key);
-
+                            //System.out.println(getMsg);
                             ForkJoinTask<Integer> task = lookup.get(key.channel().hashCode());
                             if(getMsg.equals("bye")){
+                                key.channel().close();
                                 run = false;
                                 task.cancel(true);
-                                key.channel().close();
-
                                 break;
                             }
-                            else if (task.get() == 1) {
+                            else if (task.isDone()) {
                                 send(key, getMsg, clients);
                             }else{
                                 send(key, "resend", clients);

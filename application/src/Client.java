@@ -46,15 +46,19 @@ public class Client implements Runnable{
                         }
                         if (key.isReadable()) {
                             String msg = processRead(key);
-                            System.out.println(que.toString());
+
 
                             if(msg.equals("resend")){
+                                System.out.println("resend");
                                 que.push(last);
                             }else {
                                 if(que.peek() != null){
                                     que.poll();
                                 }
-                                System.out.println("[Server]: " + msg);
+                                String [] res = msg.split("#");
+                                for(String s : res) {
+                                    System.out.println("[Server]: " + s);
+                                }
                                 window.displayMessage(msg);
                             }
                         }
@@ -111,7 +115,6 @@ public class Client implements Runnable{
         try {
             sC.finishConnect();
         } catch (IOException e) {
-            System.out.println("hola");
             try {
                 Thread.sleep(1000);
                 sC.close();

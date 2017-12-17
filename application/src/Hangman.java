@@ -34,7 +34,7 @@ public class Hangman extends JFrame {
             int i = 0;
             int print = 97;
             Random r = new Random();
-            while(i<100){
+            while(i<0){
                 print = 97 + r.nextInt(25);
                 try {
                     Thread.sleep(5);

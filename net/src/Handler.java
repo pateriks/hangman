@@ -1,8 +1,12 @@
 import java.io.*;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 
 public class Handler implements Runnable {
@@ -12,22 +16,30 @@ public class Handler implements Runnable {
     private SocketChannel sC;
     private Clients clients;
     private String guess;
-
+    private Map<Integer, ForkJoinTask<Integer>> pendingTasks;
     public Handler(SocketChannel k, Clients c){
         System.out.println("handler created");
         clients = c;
         sC = k;
+        pendingTasks = null;
     }
-    public Handler(SocketChannel k, Clients c, String s){
+    public Handler(SocketChannel k, Clients c, Map t){
+        System.out.println("handler created");
+        clients = c;
+        sC = k;
+        pendingTasks = t;
+    }
+    public Handler(SocketChannel k, Clients c, String s, Map t){
         System.out.println("handler created");
         clients = c;
         sC = k;
         guess = s;
+        pendingTasks = t;
     }
     public void run(){
         System.out.println("computing");
         String ret;
-        if(guess == null){
+        if(guess == null || guess.equals("new")){
             ret = getResponse("/init_");
         }else if(guess.equals("resend")){
             ret = "resend";
@@ -35,13 +47,21 @@ public class Handler implements Runnable {
         }else {
             ret = getResponse("/guess_".concat(guess));
         }
-        ByteBuffer buffer = ByteBuffer.wrap(ret.getBytes());
-        try {
-            sC.write(buffer);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if(!ret.equals("no send")) {
+            ByteBuffer buffer = ByteBuffer.wrap(ret.getBytes());
+            try {
+                System.out.println(ret);
+                sC.write(buffer);
+                //OutputStream out = sC.socket().getOutputStream();
+                //PrintWriter pw = new PrintWriter(new OutputStreamWriter(out));
+                //pw.println(ret);
+                //pw.flush();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.out.println("finished");
         }
-        System.out.println("finished");
     }
     private byte[] readFile(String filePathRelativeToRootDir) throws IOException {
         File file = new File(new File("../../www"), filePathRelativeToRootDir);
@@ -59,7 +79,7 @@ public class Handler implements Runnable {
         return "not implemented";
     }
     private String sendString(){
-        return new StringBuilder(hidden.substring(0, hidden.capacity()/3) +" Score " + Integer.toString(clients.getScore(sC.hashCode()))).toString();
+        return new StringBuilder(hidden.substring(0, hidden.capacity()/3) +" Score " + Integer.toString(clients.getScore(sC.hashCode())) + "#").toString();
     }
     private boolean isCommand(String s) {
         return (s.length()>0);
@@ -156,18 +176,24 @@ public class Handler implements Runnable {
                     clients.incScore(sC.hashCode());
                     hidden.setCharAt(hidden.capacity()/3+1, '_');
                     clients.removeClient(sC.hashCode());
+                    if(pendingTasks != null) {
+                        pendingTasks.replace(sC.hashCode(), ForkJoinPool.commonPool().submit(new Handler(sC, clients), 1));
+                    }
                 }else{
                     if (wrong){
                         if (hidden.capacity() > hidden.length()) {
                             hidden.append(c);
                         } else {
                             System.out.println("end of tries");
-                            for(int i=0; i<hidden.capacity()/3; i++){
-                                hidden.setCharAt(i, hidden.charAt(i+hidden.capacity()/3));
+                            for (int i = 0; i < hidden.capacity() / 3; i++) {
+                                hidden.setCharAt(i, hidden.charAt(i + hidden.capacity() / 3));
 
                             }
                             clients.decScore(sC.hashCode());
                             clients.removeClient(sC.hashCode());
+                            if (pendingTasks != null) {
+                                pendingTasks.replace(sC.hashCode(), ForkJoinPool.commonPool().submit(new Handler(sC, clients), 1));
+                            }
                         }
                     }
                 }
