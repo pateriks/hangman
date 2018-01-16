@@ -15,16 +15,19 @@ public class ServerBasic {
     private void initSS() throws IOException {
         ss = new ServerSocket((8888));
     }
+
     public void send(Socket socket, String s, Clients clients) throws IOException {
         ForkJoinTask<Integer> task = ForkJoinPool.commonPool().submit(new HandlerBasic(socket, clients, s, lookup), 1);
         if(!s.equals("resend")) {
             lookup.put(s.hashCode(), task);
         }
     }
+
     private String receive(Socket s) throws IOException {
         BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
         return br.readLine();
     }
+
     private Socket start(Clients clients) throws IOException {
         Socket s = ss.accept();
         ForkJoinTask<Integer> task = ForkJoinPool.commonPool().submit(new HandlerBasic(s, clients), 1);
@@ -32,13 +35,14 @@ public class ServerBasic {
         System.out.println("started");
         return s;
     }
+
     protected void createSocketServer(Clients clients, List<Socket> activeClients) throws IOException{
         run = true;
         new Thread(() -> {
             while (run) {
                 try {
-                    System.out.println("iterate");
                     Socket client = start(clients);
+                    System.out.println("started");
                     new Thread(()->{
                         while(true) {
                             try {
@@ -47,6 +51,7 @@ public class ServerBasic {
                                 ForkJoinTask<Integer> task = lookup.get(client.getInetAddress().hashCode());
                                 if (getMsg.equals("bye")) {
                                     client.close();
+                                    activeClients.remove(client);
                                     break;
                                 } else if (task.isDone()) {
                                     send(client, getMsg, clients);
@@ -74,6 +79,7 @@ public class ServerBasic {
             }
         }).start();
     }
+
     public static void main (String[] args) {
 
         ServerBasic test = new ServerBasic();
@@ -89,7 +95,7 @@ public class ServerBasic {
             if (input.equals("quit")){
                 test.run = false;
                 System.out.println("Not_implemented: stop by entering ^C");
-            } else if(input.equals("hej")){
+            } else if(input.equalsIgnoreCase("hej")){
                 System.out.println("Hejhej");
             }
             input="";
